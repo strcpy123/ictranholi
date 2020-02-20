@@ -1,0 +1,280 @@
+import java.io.*;
+import java.sql.*;
+import java.util.*;
+ 
+public class DBHandler {
+ 
+	private static Connection con = null;
+//this function will be called upon for connectivity to the database
+public Connection establishConnection(){
+ 
+    Properties properties = new Properties();
+ 
+    try {
+		FileInputStream file = new FileInputStream("db.properties");
+		properties.load(file);
+ 
+	    Class.forName(properties.getProperty("db.classname"));
+ 
+	    con = DriverManager.getConnection(properties.getProperty("db.url"),properties.getProperty("db.username"),properties.getProperty("db.password"));
+ 
+	} catch (FileNotFoundException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (IOException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (ClassNotFoundException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	} catch (SQLException e) {
+		// TODO Auto-generated catch block
+		e.printStackTrace();
+	}
+ 
+    return con;
+ 
+}
+}
+ 
+ 
+////////////////////////////
+ 
+// this is user defined exception , to be used in Packagae class
+public class InvalidPackageIdException extends Exception{
+ 
+	public InvalidPackageIdException() {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+ 
+	public InvalidPackageIdException(String arg0) {
+		super(arg0);
+		// TODO Auto-generated constructor stub
+	}
+ 
+ 
+}
+	////////////////
+ 
+ 
+ 
+public class Main {
+ 
+	public static void main(String[] args) {
+ 
+		//fill your code here
+ 
+	}
+ 
+}
+/////////////////
+ 
+ 
+ 
+public class Package {
+	private String packageId;
+	private String sourcePlace;
+	private String destinationPlace;
+	private double basicFare;
+	private int noOfDays;
+	private double packageCost;
+	public String getPackageId() {
+		return packageId;
+	}
+	public void setPackageId(String packageId) {
+		this.packageId = packageId;
+	}
+	public String getSourcePlace() {
+		return sourcePlace;
+	}
+	public void setSourcePlace(String sourcePlace) {
+		this.sourcePlace = sourcePlace;
+	}
+	public String getDestinationPlace() {
+		return destinationPlace;
+	}
+	public void setDestinationPlace(String destinationPlace) {
+		this.destinationPlace = destinationPlace;
+	}
+	public double getBasicFare() {
+		return basicFare;
+	}
+	public void setBasicFare(double basicFare) {
+		this.basicFare = basicFare;
+	}
+	public int getNoOfDays() {
+		return noOfDays;
+	}
+	public void setNoOfDays(int noOfDays) {
+		this.noOfDays = noOfDays;
+	}
+	public double getPackageCost() {
+		return packageCost;
+	}
+	public void setPackageCost(double packageCost) {
+		this.packageCost = packageCost;
+	}
+//this function is invoked from TravelAgency class to calculate Package Cost
+	public void calculatePackageCost() {
+		//fill your code here
+		double packageCost;
+		double discount = 0;
+		double discountPercent = 0;
+		double gst = 0;
+		double gstPercent = 12;
+ 
+		// sets the discount percent
+		if(noOfDays<=5) {
+			discount = 0;
+		}else {
+			if(noOfDays>5 && noOfDays<=8) {
+				discountPercent = 3;
+			}else {
+				if(noOfDays>8 && noOfDays<=10) {
+					discountPercent = 5;
+				}else {
+					discountPercent = 7;
+				}
+			}
+		}
+ 
+		packageCost = basicFare * noOfDays;
+		//total discount
+		discount = packageCost *  discountPercent/100;
+ 
+		//total GST
+		gst = (packageCost - discount) * gstPercent/100;
+ 
+		//calculates Package Cost
+		packageCost = (packageCost - discount) + gst;
+ 
+		//sets the value of instance variable "packageCost" 
+		this.setPackageCost(packageCost);
+	}
+ 
+ 
+}
+ 
+ 
+/////////////////////
+ 
+ 
+ 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+ 
+public class TravelAgency {
+ 
+    //write the required business logic methods as expected in the question description
+ 
+	public List<Package> generatePackageCost(String filePath) {
+ 
+		List <Package> packageList=new ArrayList<Package>();
+              try{
+                     File file=new File(filePath);
+                     BufferedReader br=new BufferedReader(new FileReader(file));
+                     String str;
+ 
+                     while((str=br.readLine())!=null){                    
+                           try{
+                                  Package p=new Package();
+                                  String [] record=str.split(",");  //read every element seperated by ,
+                                  if(validate(record[0])){
+                                         p.setPackageId(record[0]); //sets packageId
+                                         p.setSourcePlace(record[1]); // sets destination_place
+                                         p.setDestinationPlace(record[2]); // sets source_place
+                                         p.setBasicFare(Double.parseDouble(record[3])); //sets basicFare
+                                         p.setNoOfDays(Integer.parseInt(record[4])); // sets no_of_days
+                                         p.calculatePackageCost(); //calculates cost by formula Cost = ((Basic fare x number of days)-discount)+GST
+                                         packageList.add(p);
+                                  }
+                           }catch(InvalidPackageIdException i){
+                                  System.out.println(i.getMessage()); // prints if invalid packageId exception occured
+                           }
+                     }
+                     br.close();
+              }catch(IOException i){
+                     System.out.println(i);
+              }
+ 
+              return packageList;
+	}
+ 
+	public boolean validate(String packageId) throws InvalidPackageIdException {
+ 
+    	// Fill you code Here
+		if(packageId.length() != 7 || packageId.charAt(3) != '/') {
+				throw new InvalidPackageIdException("Invalid Package Id");
+		}
+		return true;
+	}
+ 
+ 
+	public List<Package> findPackagesWithMinimumNumberOfDays() {
+ 
+		// Fill you code Here
+		List<Package> packageList = new ArrayList<>();
+ 
+		//it will contain the returned object of Connection class when establishConnection() will be called
+		Connection connection = null;
+		Statement statement = null;
+		ResultSet resultSet = null;
+ 
+		DBHandler db = new DBHandler();
+		connection = db.establishConnection();
+		try {
+			statement = connection.createStatement();
+			String query = "select * from Package_Details where no_of_days in (select min(no_of_days) from Package_Details)";
+			resultSet = statement.executeQuery(query);
+ 
+		    while(resultSet.next()) {
+		    	Package pack = new Package();
+		    	pack.setPackageId(resultSet.getString(1));
+		    	pack.setSourcePlace(resultSet.getString(2));
+		    	pack.setDestinationPlace(resultSet.getString(3));
+		    	pack.setNoOfDays(resultSet.getInt(4));
+		    	pack.setPackageCost(resultSet.getDouble(5));
+		    	packageList.add(pack);
+		    }
+		} catch (SQLException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}finally {
+		    try {
+		        if(connection != null) {
+		            connection.close();
+		        }
+		    }catch(SQLException e) {
+		        e.printStackTrace();
+		    }
+ 
+		    try {
+		        if(statement != null) {
+		            statement.close();
+		        }
+		    }catch(SQLException e) {
+		        e.printStackTrace();
+		    }
+ 
+		    try {
+		        if(resultSet != null) {
+		            resultSet.close();
+		        }
+		    }catch(SQLException e) {
+		        e.printStackTrace();
+		    }
+		}
+ 
+		return packageList;
+	}
+}
+//////////////////////////
